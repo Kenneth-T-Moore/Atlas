@@ -95,7 +95,7 @@ if __name__ == '__main__':
     print 'Objective:  Ptot =', opt.aso.Ptot
 
     # enable_trace()
-    exit()
+    #exit()
     opt.run()
 
 

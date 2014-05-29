@@ -220,10 +220,7 @@ class AeroStructural(Assembly):
         q_dim = 6*(self.config.Ns+1)
         self.aero2.q = np.zeros((q_dim, 1))
 
-        # force aero2 to run (due to bug in invalidation logic)
-        self.aero2.force_execute = True
-
-        # calculate results
+       # calculate results
         self.add('results', Results())
         self.connect('config.b',            'results.b')
         self.connect('config.Ns',           'results.Ns')

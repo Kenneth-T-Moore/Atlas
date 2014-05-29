@@ -31,8 +31,8 @@ class ConfigLow(AtlasConfiguration):
 
         self.H     = self.H_opt + self.zWire
 
-        print self.parent.name, '\t', self.H, '\t',  self.Omega, '\t', self.vw, '\t', self.TWire
-        print '\t', self.Cl
+        #print self.parent.name, '\t', self.H, '\t',  self.Omega, '\t', self.vw, '\t', self.TWire
+        #print '\t', self.Cl
 
 
 class AeroStructuralLow(AeroStructural):
@@ -79,8 +79,8 @@ class ConfigHigh(AtlasConfiguration):
 
         self.TWire = [self.TWire_opt]
 
-        print self.parent.name, '\t', self.H, '\t',  self.Omega, '\t', self.vw, '\t', self.TWire
-        print '\t', self.Cl
+        #print self.parent.name, '\t', self.H, '\t',  self.Omega, '\t', self.vw, '\t', self.TWire
+        #print '\t', self.Cl
 
 
 class AeroStructuralHigh(AeroStructural):
@@ -133,8 +133,8 @@ class ConfigWind(AtlasConfiguration):
 
         self.vw = self.vw_opt
 
-        print self.parent.name, '\t', self.H, '\t',  self.Omega, '\t', self.vw, '\t', self.TWire
-        print '\t', self.Cl
+        #print self.parent.name, '\t', self.H, '\t',  self.Omega, '\t', self.vw, '\t', self.TWire
+        #print '\t', self.Cl
 
 
 class AeroStructuralWind(AeroStructural):
@@ -314,6 +314,15 @@ class HeliOptM(Assembly):
             print 'SNOPT not available, using SLSQP'
             self.add('driver', SLSQPdriver())
 
+        # Nothing has anlytical derivaties, but we have a lot of
+        # nested assemblies, so it is less problematic to just
+        # finite difference it all in one block.
+        #self.driver.gradient_options.force_fd = True
+        self.driver.gradient_options.fd_step_type = 'relative'
+        self.driver.gradient_options.fd_step = 1.0e-7
+        #self.driver.pyopt_diff = True
+        self.driver.gradient_options.gmres_tolerance = 1.0e-7
+
         self.add('mp', Multipoint())
 
         self.mp.alt_low = 0.5         # low altitude
@@ -384,7 +393,7 @@ class HeliOptM(Assembly):
 if __name__ == '__main__':
     # TODO: create units tests for the following
 
-    if True:
+    if False:
         print '====== Multipoint ======'
         mp = set_as_top(Multipoint())
 
@@ -441,3 +450,24 @@ if __name__ == '__main__':
 
         print 'Parameter:  Omega (Low) =', opt.mp.Omega_low
         print 'Parameter:  Omega (High) =', opt.mp.Omega_high
+
+    if True:
+        opt = set_as_top(HeliOptM())
+
+        from openmdao.main.test.test_derivatives import SimpleDriver
+        opt.replace('driver', SimpleDriver())
+        opt.run()
+
+        from openmdao.main.assembly import dump_iteration_tree
+        dump_iteration_tree(opt)
+
+        opt.mp.low.driver.gradient_options.gmres_tolerance = 1.0e-2
+        opt.mp.low.driver.gradient_options.fd_step_type = 'relative'
+
+        print "---Gradient---"
+        #opt.driver.workflow.check_gradient()
+
+        inputs = ['config.Omega_opt']
+        outputs = ['results.Ptot']
+        opt.mp.low.driver.workflow.check_gradient(inputs=inputs,
+                                                         outputs=outputs)
