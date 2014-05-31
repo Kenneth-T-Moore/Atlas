@@ -184,8 +184,8 @@ class ConfigGravity(AtlasConfiguration):
 
         self.TWire = [self.TWire_opt]
 
-        print self.parent.name, '\t', self.H, '\t',  self.Omega, '\t', self.vw, '\t', self.TWire
-        print '\t', self.Cl
+        #print self.parent.name, '\t', self.H, '\t',  self.Omega, '\t', self.vw, '\t', self.TWire
+        #print '\t', self.Cl
 
 
 class AeroStructuralGravity(AeroStructural):
@@ -298,6 +298,45 @@ class Multipoint(Assembly):
 
         self.driver.workflow.add(['low', 'high', 'wind', 'grav'])
 
+class Multipoint_Reduced(Assembly):
+    """ Assembly for multipoint AeroStructural optimization.
+
+        Evaluates AeroStructural for four cases:
+            low altitude
+            high altitude
+            wind
+            gravity only
+    """
+
+    # configuration inputs
+    alt_low    = Float(iotype='in', desc='low altitude')
+    alt_ratio  = Float(iotype='in', desc='proportion of time near ground')
+
+    OmegaRatio = Float(iotype='in')
+
+    vw         = Float(iotype='in', desc='wind velocity')
+
+    Cl_max     = Array(iotype='in')
+
+    # optimizer parameters
+    Omega_low  = Float(iotype='in', desc='rotor angular velocity, low altitude')
+
+    # outputs
+    P          = Float(iotype='out', desc='')
+
+    def configure(self):
+        # low altitude
+        self.add('low', AeroStructuralLow())
+
+        self.connect('Omega_low', 'low.Omega_opt')
+        self.connect('alt_low',   'low.H_opt')
+
+        self.create_passthrough('low.Mtot', 'Mtot_low')
+        self.create_passthrough('low.Ttot', 'Ttot_low')
+
+        self.connect('alt_ratio*low.Ptot', 'P')
+
+        self.driver.workflow.add(['low'])
 
 class HeliOptM(Assembly):
     """ Multipoint aero-structural optimization """
@@ -321,7 +360,6 @@ class HeliOptM(Assembly):
         self.driver.gradient_options.fd_step_type = 'relative'
         self.driver.gradient_options.fd_step = 1.0e-7
         #self.driver.pyopt_diff = True
-        self.driver.gradient_options.gmres_tolerance = 1.0e-7
 
         self.add('mp', Multipoint())
 
@@ -389,6 +427,8 @@ class HeliOptM(Assembly):
         vrCon.FOStorbuck  = 0.5     # 1.5
         vrCon.FOSwire     = 0.5     # 2
 
+        self.driver.workflow.add('mp')
+
 
 if __name__ == '__main__':
     # TODO: create units tests for the following
@@ -417,6 +457,7 @@ if __name__ == '__main__':
         mp.Cl1_high   = 1.3000
 
         mp.run()
+        #mp.run()
 
         print 'low Ptot  =', mp.low.Ptot,  ' (reference:  421.3185)'
         print 'low Mtot  =', mp.Mtot_low,  ' (reference:  126.1670)'
@@ -451,23 +492,92 @@ if __name__ == '__main__':
         print 'Parameter:  Omega (Low) =', opt.mp.Omega_low
         print 'Parameter:  Omega (High) =', opt.mp.Omega_high
 
-    if True:
+    if False:
         opt = set_as_top(HeliOptM())
 
         from openmdao.main.test.test_derivatives import SimpleDriver
         opt.replace('driver', SimpleDriver())
         opt.run()
+        #opt.mp.run()
 
-        from openmdao.main.assembly import dump_iteration_tree
-        dump_iteration_tree(opt)
+        #from openmdao.main.assembly import dump_iteration_tree
+        #dump_iteration_tree(opt)
 
-        opt.mp.low.driver.gradient_options.gmres_tolerance = 1.0e-2
+        #opt.mp.low.driver.gradient_options.gmres_tolerance = 1.0e-3
         opt.mp.low.driver.gradient_options.fd_step_type = 'relative'
+        #opt.mp.high.driver.gradient_options.fd_step_type = 'relative'
+        #opt.mp.low.driver.gradient_options.fd_step = 1.0e-7
+        opt.mp.driver.gradient_options.fd_step_type = 'relative'
+        opt.driver.gradient_options.fd_step_type = 'relative'
+        opt.driver.gradient_options.fd_step = 1.0e-5
+        #opt.mp.low.driver.gradient_options.force_fd = True
 
         print "---Gradient---"
+        #opt.mp.driver.gradient_options.force_fd = True
         #opt.driver.workflow.check_gradient()
 
-        inputs = ['config.Omega_opt']
-        outputs = ['results.Ptot']
-        opt.mp.low.driver.workflow.check_gradient(inputs=inputs,
-                                                         outputs=outputs)
+        inputs = ['low.Omega_opt']
+        #outputs = ['low.Ptot', '_pseudo_0.out0']
+        outputs = ['_pseudo_0.out0']
+        #opt.mp.driver.workflow.check_gradient(inputs=inputs, outputs=outputs)
+        #opt.mp.driver.workflow.check_gradient(inputs=inputs, outputs=outputs)
+        opt.mp.driver.workflow.config_changed()
+        print opt.mp.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        opt.mp.driver.workflow.config_changed()
+        print opt.mp.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
+
+        #inputs = ['mp.Omega_low']
+        #outputs = ['mp.P']
+        #opt.driver.workflow.check_gradient(inputs=inputs,
+                                           #outputs=outputs)
+        ##print opt.driver.workflow.calc_gradient(inputs=inputs,
+        ##                                        #outputs=outputs)
+
+        inputs = ['mp.Omega_low']
+        outputs = ['mp.P']
+        #opt.driver.workflow.check_gradient(inputs=inputs, outputs=outputs)
+        opt.driver.workflow.config_changed()
+        print opt.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        print [z.name for z in opt.mp.driver.workflow]
+        opt.driver.workflow.config_changed()
+        print opt.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
+
+        #inputs = ['Omega_opt']
+        #outputs = ['results.Ptot']
+        #opt.mp.low.driver.workflow.check_gradient(inputs=inputs, outputs=outputs)
+
+    if True:
+        opt = set_as_top(HeliOptM())
+
+        from openmdao.main.test.test_derivatives import SimpleDriver
+        opt.replace('driver', SimpleDriver())
+        print opt.mp.Omega_low, opt.mp.low.Omega_opt, '|', opt.mp.P, opt.mp.low.results.Ptot
+        opt.run()
+        print opt.mp.Omega_low, opt.mp.low.Omega_opt, '|', opt.mp.P, opt.mp.low.results.Ptot
+        opt.run()
+        print opt.mp.Omega_low, opt.mp.low.Omega_opt, '|', opt.mp.P, opt.mp.low.results.Ptot
+
+
+        opt.mp.Omega_low += .001
+        opt.run()
+        print opt.mp.Omega_low, opt.mp.low.Omega_opt, '|', opt.mp.P, opt.mp.low.results.Ptot
+
+        opt.mp.Omega_low -= .001
+        opt.run()
+        print opt.mp.Omega_low, opt.mp.low.Omega_opt, '|', opt.mp.P, opt.mp.low.results.Ptot
+
+        opt.mp.Omega_low += .001
+        opt.run()
+        print opt.mp.Omega_low, opt.mp.low.Omega_opt, '|', opt.mp.P, opt.mp.low.results.Ptot
+
+        opt.mp.Omega_low -= .001
+        opt.run()
+        print opt.mp.Omega_low, opt.mp.low.Omega_opt, '|', opt.mp.P, opt.mp.low.results.Ptot
+
+        opt.mp.low.set('Omega_opt', opt.mp.low.Omega_opt + .001, force=True)
+        opt.mp.low.run()
+        print opt.mp.Omega_low, opt.mp.low.Omega_opt, '|', opt.mp.P, opt.mp.low.results.Ptot
+
+        opt.mp.low.set('Omega_opt', opt.mp.low.Omega_opt - .001, force=True)
+        opt.mp.low.run()
+        print opt.mp.Omega_low, opt.mp.low.Omega_opt, '|', opt.mp.P, opt.mp.low.results.Ptot
