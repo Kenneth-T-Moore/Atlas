@@ -344,8 +344,8 @@ class HeliOptM(Assembly):
         # nested assemblies, so it is less problematic to just
         # finite difference it all in one block.
         #self.driver.gradient_options.force_fd = True
-        self.driver.gradient_options.fd_step_type = 'relative'
-        self.driver.gradient_options.fd_step = 1.0e-7
+        #self.driver.gradient_options.fd_step_type = 'relative'
+        #self.driver.gradient_options.fd_step = 1.0e-7
         #self.driver.pyopt_diff = True
 
         self.add('mp', Multipoint())
@@ -436,7 +436,7 @@ if __name__ == '__main__':
         print 'high Mtot =', high.Mtot, ' (reference:  126.1670)'
         print 'high Ttot =', high.Ttot, ' (reference: 1236.4368)'
 
-    if True:
+    if False:
         print '====== Multipoint ======'
         mp = set_as_top(Multipoint())
 
@@ -480,7 +480,7 @@ if __name__ == '__main__':
         print
         print 'P =', mp.P,                 ' (reference: 598.537)'
 
-    if False:
+    if True:
         print '====== HeliOptM ======'
         opt = set_as_top(HeliOptM())
 
@@ -503,8 +503,8 @@ if __name__ == '__main__':
         opt.run()
         #opt.mp.run()
 
-        #from openmdao.main.assembly import dump_iteration_tree
-        #dump_iteration_tree(opt)
+        from openmdao.main.assembly import dump_iteration_tree
+        dump_iteration_tree(opt)
 
         #opt.mp.low.driver.gradient_options.gmres_tolerance = 1.0e-3
         opt.mp.low.driver.gradient_options.fd_step_type = 'relative'
@@ -517,17 +517,16 @@ if __name__ == '__main__':
 
         print "---Gradient---"
         #opt.mp.driver.gradient_options.force_fd = True
-        #opt.driver.workflow.check_gradient()
+        opt.driver.workflow.check_gradient()
 
         inputs = ['low.Omega_opt']
-        #outputs = ['low.Ptot', '_pseudo_0.out0']
-        outputs = ['_pseudo_0.out0']
+        outputs = ['low.Ptot']
         #opt.mp.driver.workflow.check_gradient(inputs=inputs, outputs=outputs)
         #opt.mp.driver.workflow.check_gradient(inputs=inputs, outputs=outputs)
         opt.mp.driver.workflow.config_changed()
-        print opt.mp.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        opt.mp.driver.workflow.config_changed()
-        print opt.mp.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
+        #print opt.mp.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        #opt.mp.driver.workflow.config_changed()
+        #print opt.mp.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
 
         #inputs = ['mp.Omega_low']
         #outputs = ['mp.P']
@@ -539,17 +538,17 @@ if __name__ == '__main__':
         inputs = ['mp.Omega_low']
         outputs = ['mp.P']
         #opt.driver.workflow.check_gradient(inputs=inputs, outputs=outputs)
-        opt.driver.workflow.config_changed()
-        print opt.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        print [z.name for z in opt.mp.driver.workflow]
-        opt.driver.workflow.config_changed()
-        print opt.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
+        #opt.driver.workflow.config_changed()
+        #print opt.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        #print [z.name for z in opt.mp.driver.workflow]
+        #opt.driver.workflow.config_changed()
+        #print opt.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode='fd')
 
         #inputs = ['Omega_opt']
         #outputs = ['results.Ptot']
         #opt.mp.low.driver.workflow.check_gradient(inputs=inputs, outputs=outputs)
 
-    if True:
+    if False:
         opt = set_as_top(HeliOptM())
 
         from openmdao.main.test.test_derivatives import SimpleDriver
