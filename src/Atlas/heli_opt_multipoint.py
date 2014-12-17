@@ -309,7 +309,7 @@ class HeliOptM(Assembly):
         super(HeliOptM, self).__init__()
 
         # add an optimizer and a multi-point AeroStructural assembly
-        if pyopt_driver and 'SNOPT' in pyopt_driver._check_imports():
+        if False and pyopt_driver and 'SNOPT' in pyopt_driver._check_imports():
             self.add("driver", pyopt_driver.pyOptDriver())
             self.driver.optimizer = "SNOPT"
             self.driver.options = {

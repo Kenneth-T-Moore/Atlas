@@ -3,6 +3,9 @@ import unittest
 
 from scipy.io import loadmat
 
+from openmdao.main.api import set_as_top, Assembly
+from openmdao.main.test.test_derivatives import SimpleDriver
+
 from Atlas.aero import Aero, Aero2
 
 
@@ -95,6 +98,75 @@ class AeroTestCase(unittest.TestCase):
             self.assertAlmostEquals(comp.Fblade.Pp[i], val, 4,
                 msg='Pp[%d] is %f, should be %f' % (i, comp.Fblade.Pp[i], val))
 
+    def test_AeroDerivatives(self):
+
+        comp = Aero(10)
+
+        # populate inputs
+        path = os.path.join(os.path.dirname(__file__), 'aero.mat')
+        data = loadmat(path, struct_as_record=True, mat_dtype=True)
+
+        comp.b        = int(data['b'][0][0])
+        comp.yN       = data['yN'].flatten()
+        comp.Ns       = max(comp.yN.shape) - 1
+        comp.R        = 10.0
+        comp.dr       = [1., 1., 1., 1., 1., 1., 1., 1., 1., 1.]
+        comp.r        = [ 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]
+        comp.h        = data['h'][0][0]
+        comp.ycmax    = data['ycmax'][0][0]
+
+        comp.rho      = data['rho'][0][0]
+        comp.visc     = data['visc'][0][0]
+        comp.vw       = data['vw'][0][0]
+        comp.vc       = data['vc'][0][0]
+        comp.Omega    = data['Omega'][0][0]
+
+        comp.c        = data['cE']
+        comp.Cl       = data['Cl']
+        comp.d        = data['d']
+
+        comp.yWire    = data['yWire'][0]
+        comp.zWire    = data['zWire'][0][0]
+        comp.tWire    = data['tWire'][0][0]
+
+        comp.Cm       = data['Cm']
+        comp.xtL      = data['xtL']
+        comp.xtU      = data['xtU']
+
+        # run
+        comp.run()
+
+        model = set_as_top(Assembly())
+        model.add('aero', comp)
+        model.add('driver', SimpleDriver())
+        model.driver.workflow.add('aero')
+
+        model.run()
+        
+        inputs = []
+        for item in comp.list_inputs():
+            try:
+                comp.get_flattened_value(item)
+                inputs.append('aero.' + item)
+            except:
+                continue
+            
+        outputs = []
+        for item in comp.list_outputs():
+            try:
+                comp.get_flattened_value(item)
+                outputs.append('aero.' + item)
+            except:
+                continue
+            
+        #for item in inputs:
+            #model.driver.add_parameter(item, low=-500, high=500)
+            
+        #for item in outputs:
+            #model.driver.add_constraint("%s < 1000" % item)
+        model.aero.force_fd = True
+        model.driver.check_gradient(inputs=inputs, outputs=outputs)
+    
     def test_aero2(self):
         """ test Aero2
             (with vortex method for induced velocity calculation)

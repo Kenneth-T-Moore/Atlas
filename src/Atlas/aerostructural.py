@@ -261,7 +261,7 @@ class AeroStructural(Assembly):
 if __name__ == "__main__":
     # enable_trace()
 
-    top = AeroStructural()
+    top = AeroStructural(10)
     top.run()
 
     print 'AeroStructural Results'
