@@ -164,7 +164,7 @@ class AeroTestCase(unittest.TestCase):
             
         #for item in outputs:
             #model.driver.add_constraint("%s < 1000" % item)
-        model.aero.force_fd = True
+        #model.aero.force_fd = True
         model.driver.check_gradient(inputs=inputs, outputs=outputs)
     
     def test_aero2(self):
