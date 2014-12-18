@@ -142,31 +142,31 @@ class AeroTestCase(unittest.TestCase):
         model.driver.workflow.add('aero')
 
         model.run()
-        
+
         inputs = []
         for item in comp.list_inputs():
             try:
                 comp.get_flattened_value(item)
-                inputs.append('aero.' + item)
+                inputs.append(item)
             except:
                 continue
-            
+
         outputs = []
         for item in comp.list_outputs():
             try:
                 comp.get_flattened_value(item)
-                outputs.append('aero.' + item)
+                outputs.append(item)
             except:
                 continue
-            
+
         #for item in inputs:
             #model.driver.add_parameter(item, low=-500, high=500)
-            
+
         #for item in outputs:
             #model.driver.add_constraint("%s < 1000" % item)
         #model.aero.force_fd = True
-        model.driver.check_gradient(inputs=inputs, outputs=outputs)
-    
+        model.aero.driver.check_gradient(inputs=inputs, outputs=outputs)
+
     def test_aero2(self):
         """ test Aero2
             (with vortex method for induced velocity calculation)
